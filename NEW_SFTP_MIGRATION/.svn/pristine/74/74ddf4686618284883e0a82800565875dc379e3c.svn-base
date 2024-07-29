@@ -1,0 +1,213 @@
+package test;
+
+
+
+import java.io.File;
+import java.io.IOException;
+import java.util.Properties;
+
+import javax.xml.parsers.*;
+import javax.xml.transform.OutputKeys;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
+
+import org.apache.commons.io.FileUtils;
+import org.apache.log4j.Logger;
+import org.w3c.dom.Document;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
+
+import dao.DatabaseMaster;
+import utilities.GenericUtilities;
+
+
+public class TestXML {
+
+	public static final Logger logger = Logger.getLogger(TestXML.class);
+	public static void main(String[] args)
+	{
+		
+		
+		String destinationpath="/home/cpsmsapp/CPSMS/"+"/EAT/"+"/AccountsData/ToCPSMS/".replace("AccountsData", "AccountValidation").replace("ToCPSMS", "ToPFMS");
+		//logger.info(destinationpath);
+		
+
+	}
+
+	public static void paymentFileHandle(String bankcode)
+	{
+		logger.info("============Start paymentFileHandle==========================");
+		Properties BanksNameprop = GenericUtilities.BanksNameProp;
+		Properties ePaymentProp = GenericUtilities.ePaymentProp;
+		String filePath=BanksNameprop.getProperty(bankcode)+ePaymentProp.getProperty("cbs")+bankcode+ePaymentProp.getProperty("PaymentReqData").replace("ePay", "DSC")+"/Download/";
+		String newpath=BanksNameprop.getProperty(bankcode)+ePaymentProp.getProperty("cbs")+bankcode+ePaymentProp.getProperty("PaymentReqData").replace("ePay", "DSC")+"/FromCPSMS/";
+		String DownloadArchive=BanksNameprop.getProperty(bankcode)+ePaymentProp.getProperty("cbs")+bankcode+ePaymentProp.getProperty("PaymentReqData").replace("ePay", "DSC")+"/DownloadArchive/";
+		/*String filePath = "D:/infweb/Download/";
+		String newpath="D:/infweb/FromCPSMS/";
+		String DownloadArchive="D:/infweb/DownloadArchive/";*/
+		File folder = new File(filePath);
+		File[] file = folder.listFiles();
+		if(file!=null)
+		{
+		for (File xmlFile : file)
+		{
+			try
+			{
+				logger.info(xmlFile.toString());
+				if (xmlFile.length()>0 )
+				{
+					if(xmlFile.getName().contains("EAT")||xmlFile.getName().contains("DSC"))
+					{
+						boolean flag= new xmltesting().checkDSCxmlTemper(xmlFile);
+						if(flag)
+						{
+							removeXMLElement(xmlFile,newpath); 
+							boolean a=xmlFile.renameTo(new File(DownloadArchive+xmlFile.getName()));
+							if(a==true)
+							{
+								logger.info(xmlFile.getName()+" File Move Succesfully in to DownloadArchive directory"); 
+							}
+							else
+							{
+								try
+								{
+									FileUtils.moveFileToDirectory(xmlFile, new File(DownloadArchive+xmlFile.getName()), true); 
+								}catch(Exception e)
+								{
+									try
+									{
+										String shCommand="mv "+xmlFile.toString()+" "+DownloadArchive+xmlFile.getName();
+										Runtime rt = Runtime.getRuntime();
+										Process prcs = null; 
+										// run the command
+										prcs = rt.exec(shCommand);
+									}catch(Exception e1)
+									{
+										FileUtils.deleteDirectory(xmlFile); 
+									}
+
+								}
+
+							}
+
+						}
+
+					}else
+					{
+
+
+						try
+						{
+							FileUtils.copyFile(xmlFile, new File(DownloadArchive+xmlFile.getName()));  
+						}catch(Exception e)
+						{
+							try
+							{
+								String shCommand="cp "+xmlFile.toString()+" "+DownloadArchive+xmlFile.getName();
+								Runtime rt = Runtime.getRuntime();
+								Process prcs = null; 
+								// run the command
+								prcs = rt.exec(shCommand);
+							}catch(Exception e1)
+							{
+								//FileUtils.deleteDirectory(xmlFile); 
+							}
+
+						}
+
+						boolean a=xmlFile.renameTo(new File(newpath+xmlFile.getName()));
+						if(a==true)
+						{
+							logger.info(xmlFile.getName()+" File Move Succesfully in to bank directory"); 
+						} 
+						else
+						{
+
+
+							try
+							{
+								FileUtils.moveFileToDirectory(xmlFile, new File(newpath+xmlFile.getName()), true); 
+							}catch(Exception e)
+							{
+								try
+								{
+									String shCommand="mv "+xmlFile.toString()+" "+newpath+xmlFile.getName();
+									Runtime rt = Runtime.getRuntime();
+									Process prcs = null; 
+									// run the command
+									prcs = rt.exec(shCommand);
+								}catch(Exception e1)
+								{
+									FileUtils.deleteDirectory(xmlFile); 
+								}
+
+							}
+
+						}
+
+					}
+				}
+				else
+				{
+					logger.error(xmlFile.getName()+"File is 0 KB");
+				}
+
+			}catch(Exception e)
+			{
+				e.printStackTrace();
+			}
+
+
+		} 
+		}
+
+
+		logger.info("============END paymentFileHandle==========================");
+
+
+	}
+	public static void removeXMLElement(File xmlFile,String newpath)
+	{
+		// File xmlFile = new File(filePath);
+		logger.info(xmlFile.getName());
+		DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
+		DocumentBuilder dBuilder;
+		try {
+			dBuilder = dbFactory.newDocumentBuilder();
+			Document doc = dBuilder.parse(xmlFile);
+			doc.getDocumentElement().normalize();
+			deleteElement(doc);
+			doc.getDocumentElement().normalize();
+			TransformerFactory transformerFactory = TransformerFactory.newInstance();
+			Transformer transformer = transformerFactory.newTransformer();
+			DOMSource source = new DOMSource(doc);
+			StreamResult result = new StreamResult(new File(newpath+xmlFile.getName()));
+			transformer.setOutputProperty(OutputKeys.INDENT, "yes");
+			transformer.transform(source, result);
+			logger.info("XML file updated successfully");
+
+		} catch (Exception e1) {
+			e1.printStackTrace();
+		}
+	}
+	public  static void deleteElement(Node someNode) {
+		NodeList childs = someNode.getChildNodes();
+		for (int i = 0; i < childs.getLength();) {
+			Node child = childs.item(i);
+			if (child.getNodeType() == Document.ELEMENT_NODE) {
+				if (child.getNodeName().equalsIgnoreCase("Signature")) {
+					child.getParentNode().removeChild(child);
+					continue;
+				} else {
+					deleteElement(child);
+				}
+			}
+			i++;
+		}
+	}
+}
+
+
+

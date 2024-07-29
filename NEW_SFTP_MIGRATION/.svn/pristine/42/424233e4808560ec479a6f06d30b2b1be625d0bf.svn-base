@@ -1,0 +1,13 @@
+package utilities;
+
+public class TestDemo {
+
+	public static void main(String[] args) {
+		
+		String filename="520AVQRESNRG1408202040.xml";
+		String[] b=filename.split("AVQRES");
+		System.out.println(b[1]);
+
+	}
+
+}

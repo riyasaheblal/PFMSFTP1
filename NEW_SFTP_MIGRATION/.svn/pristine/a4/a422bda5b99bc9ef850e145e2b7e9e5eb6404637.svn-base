@@ -1,0 +1,256 @@
+package dao;
+
+import java.sql.*;
+import java.util.Properties;
+
+
+
+import org.apache.log4j.Logger;
+
+
+
+import utilities.GenericUtilities;
+
+public class DatabaseMaster 
+{
+	public static final Logger logger = Logger.getLogger(DatabaseMaster.class);
+	public static Connection getConnection(String bankCode)
+	{
+		Properties properties = new Properties();
+		Connection connection = null; 
+		try {
+
+			properties= GenericUtilities.databaseProp;
+
+			/*String dataBaseServer=properties.getProperty("AppDataBaseServer"+bankCode);
+			String userName=properties.getProperty("AppUserName"+bankCode);
+			String password=properties.getProperty("AppPassword"+bankCode);*/
+
+			String dataBaseServer = properties.getProperty("DatabaseServerForAllApp");
+			String userName = properties.getProperty("UsernameForAllApp");
+			String password = properties.getProperty("PasswordForAllApp");
+			String Driver=properties.getProperty("Driver");
+
+			Class.forName(Driver);
+			connection = DriverManager.getConnection(dataBaseServer,userName,password);
+		}
+		catch (Exception e) 
+		{
+			e.printStackTrace();
+			logger.info(GenericUtilities.printException(e));
+			logger.error(GenericUtilities.printException(e));
+		}  
+		return connection;
+	}
+
+	public static  boolean FileInformation(String bankCode, String filename, Connection connection,String value)
+	{
+		//Connection connection =  DatabaseMaster.getConnection(bankCode);
+		
+		boolean isDone = false;
+		PreparedStatement preparedStatement = null;
+		String query = null;
+		try
+		{
+			if((filename.contains("BRNREQ")||filename.contains("AVREQ")||filename.contains("TRNREQ")||filename.contains("FCRREQ")||filename.contains("PAYREQ"))&&!filename.contains("PAYREQACK"))
+			{
+				query="INSERT INTO FileInformation(req,download,upload,dwn_creatdate,bankcode) values(?,?,?,systimestamp,?)";
+				preparedStatement = connection.prepareStatement(query);
+				preparedStatement.setString(1, filename);
+
+				if(value.equals("Download"))
+				{
+					preparedStatement.setString(2, "Download");
+					preparedStatement.setString(3, " ");
+					preparedStatement.setString(4, bankCode);
+					
+				}else
+				{
+					preparedStatement.setString(2, " ");
+					preparedStatement.setString(3, "Upload");
+					preparedStatement.setString(4, bankCode);
+				}
+				
+
+
+			}else if(filename.contains("AVQRES")||filename.contains("AVRES")||filename.contains("PAYREQACK")||filename.contains("INIPAY")||filename.contains("SUCPAY")||filename.contains("REJPAY"))
+			{
+				query="update FileInformation set";
+				String dataSubstring=filename.substring(3, 6);
+
+				if(filename.contains("AVQRES"))
+				{
+					String[] b=filename.split("AVQRES");
+					if(filename.contains("EAT"))
+					{
+						query=query+" upload='upload', resp='"+filename+"',upld_creatdate=systimestamp  where UPLD_CREATDATE is  null and req like '"+bankCode+"%EAT%AV%"+b[1]+"%'";	
+					}
+					else if(filename.contains("PMK"))
+					{
+						query=query+" upload='upload', resp='"+filename+"',upld_creatdate=systimestamp  where UPLD_CREATDATE is  null and req like '"+bankCode+"%PMK%AV%"+b[1]+"%'";	
+					}
+					else if(filename.contains("CGA"))
+					{
+						query=query+" upload='upload', resp='"+filename+"',upld_creatdate=systimestamp  where UPLD_CREATDATE is  null and req like '"+bankCode+"%CGA%AV%"+b[1]+"%'";	
+					}
+					else if(dataSubstring.contains("NRG"))
+					{
+						query=query+" upload='upload', resp='"+filename+"',upld_creatdate=systimestamp  where UPLD_CREATDATE is  null and req like '"+bankCode+"NRG%AV%"+b[1]+"%'";	
+
+					}
+					
+					else
+					{
+						query=query+" upload='upload', resp='"+filename+"',upld_creatdate=systimestamp  where UPLD_CREATDATE is  null and req like '"+bankCode+"AVREQ"+b[1]+"%'";
+							
+					}
+						
+				}
+				else if(filename.contains("AVRES"))
+				{
+					String[] b=filename.split("AVRES");
+
+					if(filename.contains("EAT"))
+					{
+						query=query+" upload='upload', resp_reqular='"+filename+"',upld_creatdate=systimestamp  where UPLD_CREATDATE is  null and req like '"+bankCode+"%EAT%AV%"+b[1]+"%'";	
+					}
+					else if(filename.contains("PMK"))
+					{
+						query=query+" upload='upload', resp_reqular='"+filename+"',upld_creatdate=systimestamp  where UPLD_CREATDATE is  null and req like '"+bankCode+"%PMK%AV%"+b[1]+"%'";	
+					}
+					else if(filename.contains("CGA"))
+					{
+						query=query+" upload='upload', resp='"+filename+"',upld_creatdate=systimestamp  where UPLD_CREATDATE is  null and req like '"+bankCode+"%CGA%AV%"+b[1]+"%'";	
+					}
+					else if(dataSubstring.contains("NRG"))
+					{
+						query=query+" upload='upload', resp='"+filename+"',upld_creatdate=systimestamp  where UPLD_CREATDATE is  null and req like '"+bankCode+"NRG%AV%"+b[1]+"%'";	
+
+					}
+					
+					else
+					{
+						query=query+" upload='upload', resp_reqular='"+filename+"',upld_creatdate=systimestamp  where UPLD_CREATDATE is  null and req like '"+bankCode+"AVREQ"+b[1]+"%'";
+							
+					}
+				}
+				else if(filename.contains("PAYREQACK"))
+				{
+					String[] b=filename.split("PAYREQACK");
+					if(filename.contains("EAT"))
+					{
+					query=query+" upload='upload', ack='"+filename+"',ack_upld_creatdate=systimestamp  where ack_upld_creatdate is  null and req like '"+bankCode+"%EAT%PAYREQ%"+b[1]+"%'";
+					}
+					else if(filename.contains("DSC"))
+					{
+						query=query+" upload='upload', ack='"+filename+"',ack_upld_creatdate=systimestamp  where ack_upld_creatdate is  null and req like '"+bankCode+"%DSC%PAYREQ%"+b[1]+"%'";
+					}
+					else if(filename.contains("PMK"))
+					{
+						query=query+" upload='upload', ack='"+filename+"',ack_upld_creatdate=systimestamp  where ack_upld_creatdate is  null and req like '"+bankCode+"%PMK%PAYREQ%"+b[1]+"%'";
+					}
+					else 
+					{
+						query=query+" upload='upload', ack='"+filename+"',ack_upld_creatdate=systimestamp  where ack_upld_creatdate is  null and req like '"+bankCode+"%PPA%PAYREQ%"+b[1]+"%'";
+					}
+				}
+				else if(filename.contains("INIPAY"))
+				{
+					String[] b=filename.split("INIPAY");
+					if(filename.contains("EAT"))
+					{
+						query=query+" upload='upload', debit='"+filename+"',debit_upld_creatdate=systimestamp  where  debit_upld_creatdate is  null and req like '"+bankCode+"%EAT%PAYREQ%"+b[1]+"%'";
+					}
+					else if(filename.contains("PMK"))
+					{
+						query=query+" upload='upload', debit='"+filename+"',debit_upld_creatdate=systimestamp  where debit_upld_creatdate is  null and  req like '"+bankCode+"%PMK%PAYREQ%"+b[1]+"%'";
+					}
+					else if(filename.contains("DSC"))
+					{
+						query=query+" upload='upload', debit='"+filename+"',debit_upld_creatdate=systimestamp  where debit_upld_creatdate is  null and req like '"+bankCode+"%DSC%PAYREQ%"+b[1]+"%'";
+					}
+					else
+					{
+						query=query+" upload='upload', debit='"+filename+"',debit_upld_creatdate=systimestamp  where debit_upld_creatdate is  null and req like '"+bankCode+"%PPA%PAYREQ%"+b[1]+"%'";
+					}
+					
+				}
+				else if(filename.contains("SUCPAY"))
+				{
+					String[] b=filename.split("SUCPAY");
+					
+					if(filename.contains("EAT"))
+					{
+						query=query+" upload='upload', credit='"+filename+"',credit_upld_creatdate=systimestamp  where credit_upld_creatdate is  null and req like '"+bankCode+"%EAT%PAYREQ%"+b[1]+"%'";
+					}
+					else if(filename.contains("PMK"))
+					{
+						query=query+" upload='upload', credit='"+filename+"',credit_upld_creatdate=systimestamp  where credit_upld_creatdate is  null and req like '"+bankCode+"%PMK%PAYREQ%"+b[1]+"%'";
+					}
+					else if(filename.contains("DSC"))
+					{
+						query=query+" upload='upload', credit='"+filename+"',credit_upld_creatdate=systimestamp  where credit_upld_creatdate is  null and req like '"+bankCode+"%DSC%PAYREQ%"+b[1]+"%'";
+					}
+					else
+					{
+						query=query+" upload='upload', credit='"+filename+"',credit_upld_creatdate=systimestamp  where credit_upld_creatdate is  null and req like '"+bankCode+"%PPA%PAYREQ%"+b[1]+"%'";
+					}
+
+					
+				}
+				else if(filename.contains("REJPAY"))
+				{
+					String[] b=filename.split("REJPAY");
+					if(filename.contains("EAT"))
+					{
+						query=query+" upload='upload', rejectfile='"+filename+"',rejectfile_upld_creatdate=systimestamp  where rejectfile_upld_creatdate is  null and req like '"+bankCode+"%EAT%PAYREQ%"+b[1]+"%'";
+					}
+					else if(filename.contains("DSC"))
+					{
+						query=query+" upload='upload', rejectfile='"+filename+"',rejectfile_upld_creatdate=systimestamp  where rejectfile_upld_creatdate is  null and req like '"+bankCode+"%DSC%PAYREQ%"+b[1]+"%'";
+					}
+					else if(filename.contains("PMK"))
+					{
+						query=query+" upload='upload', rejectfile='"+filename+"',rejectfile_upld_creatdate=systimestamp  where rejectfile_upld_creatdate is  null and req like '"+bankCode+"%PMK%PAYREQ%"+b[1]+"%'";
+					}
+					else
+					{
+						query=query+" upload='upload', rejectfile='"+filename+"',rejectfile_upld_creatdate=systimestamp  where rejectfile_upld_creatdate is  null and req like '"+bankCode+"%PPA%PAYREQ%"+b[1]+"%'";
+					}
+
+					
+				}
+				logger.info("Update Query= "+query);
+				preparedStatement = connection.prepareStatement(query);
+				
+			}
+			logger.info("upload Query= "+query);
+			preparedStatement.executeUpdate();
+			isDone = true;
+
+
+
+		}catch( Exception se ){
+			se.printStackTrace();
+			logger.error(GenericUtilities.printException(se));
+			logger.info(GenericUtilities.printException(se));
+			logger.error("Exception while inserting  AGENCYACCOUNTMASTER for bank code :"+bankCode);
+		} 
+		finally{
+			try {
+				preparedStatement.close();
+				//connection.close();
+
+			} catch (Exception e) {
+				logger.error(GenericUtilities.printException(e));
+				logger.info(GenericUtilities.printException(e));
+				logger.error("Exception while inserting  AGENCYACCOUNTMASTER for bank code :"+bankCode);
+			}
+		}
+		return isDone;
+
+	}
+
+
+
+}

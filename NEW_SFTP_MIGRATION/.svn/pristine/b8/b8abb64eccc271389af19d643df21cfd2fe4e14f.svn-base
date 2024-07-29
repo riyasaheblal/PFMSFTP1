@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="src" path="src"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/PFMS_Lib"/>
+	<classpathentry kind="lib" path="lib/apache-log4j-extras-1.2.17.jar"/>
+	<classpathentry kind="lib" path="lib/commons-net-3.0.1.jar"/>
+	<classpathentry kind="lib" path="lib/jsch-0.1.44.jar"/>
+	<classpathentry kind="lib" path="lib/jsch-0.1.55.jar"/>
+	<classpathentry kind="lib" path="lib/log4j-1.2.16.jar"/>
+	<classpathentry kind="lib" path="lib/ojdbc14.jar"/>
+	<classpathentry kind="lib" path="commons-io-2.4.jar"/>
+	<classpathentry kind="output" path="bin"/>
+</classpath>

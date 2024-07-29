@@ -1,0 +1,136 @@
+	package bo;
+
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.Date;
+import java.util.Properties;
+import java.util.Timer;
+import java.util.TimerTask;
+
+import org.apache.log4j.Logger;
+
+
+
+
+import test.TestXML;
+import utilities.GenericUtilities;
+
+
+public class ExecuteScheduler {
+
+	public static final Logger logger = Logger.getLogger(ExecuteScheduler.class);
+
+
+	public static void main(String[] args) {
+		Timer timer = new Timer();	
+		timer.schedule(new TimerTask() {
+
+			@Override
+			public void run() 
+			{
+				try {
+
+					Connection con = null; 
+					Properties props = GenericUtilities.databaseProp;
+					Properties BanksNameprop = GenericUtilities.BanksNameProp;
+					String dataBaseServer1="";
+					String userName1="";
+					String password1 ="";
+					String Driver="";
+					
+					
+					 dataBaseServer1 = props.getProperty("DatabaseServerForAllApp");
+					 userName1 = props.getProperty("UsernameForAllApp");
+					 password1 = props.getProperty("PasswordForAllApp");
+					 Driver=props.getProperty("Driver");
+					
+					Class.forName(Driver);  
+					con = DriverManager.getConnection(dataBaseServer1,userName1,password1); 
+					Statement stmt1=con.createStatement(java.sql.ResultSet.TYPE_SCROLL_INSENSITIVE,java.sql.ResultSet.CONCUR_UPDATABLE);
+					String sql = "select distinct bankcode from banks_on_app where DWN_UP='Y'";
+					ResultSet res1 = stmt1.executeQuery(sql); 
+					String bankcode = "";
+					while(res1.next()){
+						String getbankcode= res1.getString("bankcode");
+						bankcode=bankcode.concat(getbankcode);
+						bankcode=bankcode.concat(",");
+					}
+					if(res1!=null)
+					res1.close();
+					if(stmt1!=null)
+					stmt1.close();
+					
+
+					int length = bankcode.length();
+					String AllBankCode = bankcode.substring(0, length-1);
+
+					String[] acarray=AllBankCode.split(",");
+					for (final String bankcode1 : acarray)
+					{
+						try
+						{
+							//						if(!bankcode1.equalsIgnoreCase("099")){
+							String mountname = BanksNameprop.getProperty(bankcode1);
+							File check = new File(mountname);
+							boolean isExist = check.exists();
+							if(isExist){
+
+								//if(!"099,075,328".contains(bankcode1))
+								new ExecuteScheduler().runQuick(bankcode1,con);
+								//							new ExecuteScheduler().runQuick("077");
+							}
+						}catch(Exception e)
+						{
+							logger.info(e+"for bank "+bankcode1);
+						}
+					}
+					
+					//					}
+				}  catch (Exception e) {
+					e.printStackTrace();
+					logger.info(e);
+					logger.error(e);
+				} 
+			}
+		},1000,30000 );
+	}
+	public void runQuick(final String bankCode,Connection con){
+		//		final String bankCode ="251";
+
+		logger.info("Start Time for Bank --"+bankCode);
+		long startTime = System.nanoTime();
+		logger.info("Start Time --" + new Date());
+		
+		
+		//new Ftp().downloadRequestFile(bankCode);
+		
+		//new MiddleWare().processFunction1(bankCode);  // to fetch file from SBMS SFTP to C-Edge SFTP
+		
+		new MiddleWare().processFunction2(bankCode,con);  // to fetch file from C-Edge SFTP to APP server
+		TestXML.paymentFileHandle( bankCode);
+		
+			try {
+				if(con!=null)
+				con.close();
+			} catch (SQLException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		
+		//new MainController2().mainFlow(bankCode);
+		//mainController.mainFlow(bankCode);
+		long endTime = System.nanoTime();
+		Date date1 = new Date();
+		logger.info("End Time --" + date1);
+		long totalTime = (endTime - startTime)/1000000000;
+		logger.info("Total Run time Taken  "+totalTime + " Seconds \n");
+		//
+
+	}
+}

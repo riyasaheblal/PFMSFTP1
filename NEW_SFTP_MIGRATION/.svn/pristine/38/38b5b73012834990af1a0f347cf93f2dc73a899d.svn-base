@@ -1,0 +1,224 @@
+package test;
+import javax.xml.crypto.*;
+import javax.xml.crypto.dsig.*;
+import javax.xml.crypto.dom.*;
+import javax.xml.crypto.dsig.dom.DOMValidateContext;
+import javax.xml.crypto.dsig.keyinfo.*;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.security.*;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
+
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.xpath.XPath;
+import javax.xml.xpath.XPathConstants;
+import javax.xml.xpath.XPathExpression;
+import javax.xml.xpath.XPathFactory;
+
+import org.apache.log4j.Logger;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
+
+import bo.ExecuteScheduler;
+
+/**
+ * This is a simple example of validating an XML
+ * Signature using the JSR 105 API. It assumes the key needed to
+ * validate the signature is contained in a KeyValue KeyInfo.
+ */ 
+
+
+//
+// Synopsis: java Validate [document]
+//
+//    where "document" is the name of a file containing the XML document
+//    to be validated.
+//
+public class xmltesting {
+	public static final Logger logger = Logger.getLogger(xmltesting.class);
+	public static void main(String[] args) throws Exception 
+	{
+		new xmltesting().checkDSCxmlTemper(new File("D:/Mahesh/Mahesh/CPSMS_Project/DSC/JSMDSCPAYREQ051220191.xml"));
+		//new xmltesting().checkDSCxmlTemper(new File("D:/Mahesh/Mahesh/CPSMS_Project/DSC/099DSCPAYREQ280320197.xml"));
+
+	}
+
+	public boolean checkDSCxmlTemper(File filepath)
+	{
+
+
+		try
+		{
+			DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+			dbf.setNamespaceAware(true);
+			Document doc =
+					dbf.newDocumentBuilder().parse(new FileInputStream(filepath));  //000DSCPAYREQ0605201750561 
+			//	dbf.newDocumentBuilder().parse(new FileInputStream("C:/Users/vinil.g/Desktop/XML_Test/Test.xml"));
+
+			logger.info("Path"+" "+dbf);
+			// Find Signature element
+			NodeList nl =
+					doc.getElementsByTagNameNS(XMLSignature.XMLNS, "Signature");
+			if (nl.getLength() == 0) {
+				throw new Exception("Cannot find Signature element");
+			}
+
+			// Create a DOM XMLSignatureFactory that will be used to unmarshal the
+			// document containing the XMLSignature
+			XMLSignatureFactory fac = XMLSignatureFactory.getInstance("DOM");
+
+			// Create a DOMValidateContext and specify a KeyValue KeySelector
+			// and document context
+			DOMValidateContext valContext = new DOMValidateContext
+					(new KeyValueKeySelector(), nl.item(0));
+
+			// unmarshal the XMLSignature
+			XMLSignature signature = fac.unmarshalXMLSignature(valContext);
+
+			// Validate the XMLSignature (generated above)
+			boolean coreValidity = signature.validate(valContext);
+
+			logger.info("coreValidity"+" "+coreValidity);
+
+			// Check core validation status
+			if (coreValidity == false) {
+				System.err.println("Signature failed core validation");
+				boolean sv = signature.getSignatureValue().validate(valContext);
+				logger.info("signature validation status: " + sv);
+				// check the validation status of each Reference
+				Iterator i = signature.getSignedInfo().getReferences().iterator();
+				for (int j=0; i.hasNext(); j++) {
+					boolean refValid =
+							((Reference) i.next()).validate(valContext);
+					logger.info("ref["+j+"] validity status: " + refValid);
+				}
+			} else {
+				logger.info("Signature passed core validation");
+			}
+
+		}catch(Exception e)
+		{
+			//e.printStackTrace();
+			try
+			{
+			DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+			DocumentBuilder db = dbf.newDocumentBuilder();
+			Document document  = db.parse(filepath);
+
+			document.getDocumentElement().normalize();
+			
+			XPathFactory xPathfactory = XPathFactory.newInstance();
+			XPath xpath = xPathfactory.newXPath();
+			XPathExpression expr = xpath.compile("//Accounts[@RecordsCount]");
+			NodeList nl = (NodeList) expr.evaluate(document, XPathConstants.NODESET);
+			
+			NodeList nList = document.getElementsByTagName("X509Data");
+			
+			
+			for (int temp = 0; temp < nList.getLength(); temp++) {
+				
+				Node nNode = nList.item(temp);
+
+
+				if (nNode.getNodeType() == Node.ELEMENT_NODE) {
+					Element element = (Element) nNode;
+					String s=element.getElementsByTagName("X509Certificate").item(0).getTextContent();
+					if(s.equals("MIIFeTCCBGGgAwIBAgIEARKpYTANBgkqhkiG9w0BAQsFADCB0DELMAkGA1UEBhMCSU4xGDAWBgNVBAoTD2VNdWRocmEgTGltaXRlZDEdMBsGA1UECxMUQ2VydGlmeWluZyBBdXRob3JpdHkxDzANBgNVBBETBjU2MDEwMzESMBAGA1UECBMJS2FybmF0YWthMSMwIQYDVQQJExpPdXRlciBSaW5nIFJvYWQsIEJhbmdhbG9yZTEdMBsGA1UEMxMUM3JkIEZsb29yLFNhaSBBcmNhZGUxHzAdBgNVBAMTFmUtTXVkaHJhIENBIFNQTCAyMDE1LTIwHhcNMTgwNzA5MDkwMTM3WhcNMjAwNzA4MDkwMTM3WjA5MSEwHwYDVQQLExhEb21haW4gQ29udHJvbCBWYWxpZGF0ZWQxFDASBgNVBAMTC3BmbXMubmljLmluMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEApjzMItIMXiLP6xVqQjt6swatz3CN9uDcEyWJS4HiVo9rbWx7ynRtEJGxCtYoh5jA6uwfH62Cix23j6GLNvZCdRJziY9cQkA6aMNWqQwe14+RnVyg15l+1llpz9NEWScdDVLGMfNtmguNvhbefCdFFnolgTS8vqmNbkpkXbiu/mDVba4OZKMm/A8zAEt+2z4rQUDJU0GiNvpLRgdusOOLExjsExNHjKmWzMSLUNT0vOlLs0GSmg2QBzdJSX5ssoZ0NYpBsDD9b2FvNUxB53KTlLxY8YFFo+uEjWnE6Kki+LDJv6wFqQ3U8twPRNq7ZFMUBqzTZrRlps0osDmc2348LwIDAQABo4IB7zCCAeswJwYDVR0RBCAwHoILcGZtcy5uaWMuaW6CD3d3dy5wZm1zLm5pYy5pbjATBgNVHSMEDDAKgAhEm8S3PVfpDjAdBgNVHQ4EFgQUyFBEfq63k2SdLa0VYsS+6+IiqikwDgYDVR0PAQH/BAQDAgWgMB0GA1UdJQQWMBQGCCsGAQUFBwMBBggrBgEFBQcDAjCBggYDVR0gBHsweTAlBgZggmRkAgIwGzAZBggrBgEFBQcCAjANGgtDbGFzcyAyIFNTTDBQBgdggmRkAQgCMEUwQwYIKwYBBQUHAgEWN2h0dHA6Ly93d3cuZS1tdWRocmEuY29tL3JlcG9zaXRvcnkvY3BzL2UtTXVkaHJhX0NQUy5wZGYwgYYGCCsGAQUFBwEBBHoweDAnBggrBgEFBQcwAYYbaHR0cDovL29jc3BzcGwuZS1tdWRocmEuY29tME0GCCsGAQUFBzAChkFodHRwOi8vd3d3LmUtbXVkaHJhLmNvbS9yZXBvc2l0b3J5L2NhY2VydHMvZW11ZGhyYWNhc3BsMjAxNS0yLmNydDBPBgNVHR8ESDBGMESgQqBAhj5odHRwOi8vd3d3LmUtbXVkaHJhLmNvbS9yZXBvc2l0b3J5L2NybHMvZW11ZGhyYWNhc3BsMjAxNS0yLmNybDANBgkqhkiG9w0BAQsFAAOCAQEAhF3olhzMKx+rHlHRpi3w4tSJwAzN+9GPT+RpoIXBlZDLaqzRcrbHe75XyIQx36CVT2NEzproA/dtx5av6nuMhO67Gplyk6/q9aNWBqu1OEbVvHegPG7A+KloXq7cGpO4+GXRKaviMJ58G4oLtf17MroX6eQAJ0BL61L6xD6BKI2v5UN2zn2Ztu4Pb9jm2tJBc/LqrQ1NRy3fofLb0d+wC/nQxVj2einykP9R5A+nnnjybUgse/rIT6pmzlspY7BMBKTMaSnkaPkC1B3xAh19pxD8m67Ft1jN5ZJ+QAesqzv75eTqvtLFdS8qPrT/QHnCnPFVrL8dpKVdr4kgojccBg=="))
+					{
+						return true;
+					}
+					else if(s.equals("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"))
+					{
+						return true;
+					}
+					else
+					{
+						return false;
+					}
+					
+					
+				}
+			}
+			
+			}catch(Exception e1)
+			{
+				return false;
+			}
+			
+			
+			//return false;
+		}
+		// Instantiate the document to be validated
+		return true;
+
+	}
+
+
+
+
+	/**
+	 * KeySelector which retrieves the public key out of the
+	 * KeyValue element and returns it.
+	 * NOTE: If the key algorithm doesn't match signature algorithm,
+	 * then the public key will be ignored.
+	 */
+	private static class KeyValueKeySelector extends KeySelector {
+		public KeySelectorResult select(KeyInfo keyInfo,
+				KeySelector.Purpose purpose,
+				AlgorithmMethod method,
+				XMLCryptoContext context)
+						throws KeySelectorException {
+			if (keyInfo == null) {
+				throw new KeySelectorException("Null KeyInfo object!");
+			}
+			SignatureMethod sm = (SignatureMethod) method;
+			List list = keyInfo.getContent();
+
+			for (int i = 0; i < list.size(); i++) {
+				XMLStructure xmlStructure = (XMLStructure) list.get(i);
+				if (xmlStructure instanceof KeyValue) {
+					PublicKey pk = null;
+					try {
+						pk = ((KeyValue)xmlStructure).getPublicKey();
+					} catch (KeyException ke) {
+						throw new KeySelectorException(ke);
+					}
+					// make sure algorithm is compatible with method
+					if (algEquals(sm.getAlgorithm(), pk.getAlgorithm())) {
+						return new SimpleKeySelectorResult(pk);
+					}
+				}
+			}
+			throw new KeySelectorException("No KeyValue element found!");
+		}
+
+		//@@@FIXME: this should also work for key types other than DSA/RSA
+		static boolean algEquals(String algURI, String algName) {
+			if (algName.equalsIgnoreCase("DSA") &&
+					algURI.equalsIgnoreCase(SignatureMethod.DSA_SHA1)) {
+				return true;
+			} else if (algName.equalsIgnoreCase("RSA") &&
+					algURI.equalsIgnoreCase(SignatureMethod.RSA_SHA1)) {
+				return true;
+			} else {
+				return false;
+			}
+		}
+	}
+
+	private static class SimpleKeySelectorResult implements KeySelectorResult {
+		private PublicKey pk;
+		SimpleKeySelectorResult(PublicKey pk) {
+			this.pk = pk;
+		}
+
+		public Key getKey() { return pk; }
+	}
+}
+

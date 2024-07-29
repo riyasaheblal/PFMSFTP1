@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="windows-1252"?>
+<!DOCTYPE log4j:configuration SYSTEM "log4j.dtd" >
+<log4j:configuration>
+ 
+ <appender name="fileAppender" class="org.apache.log4j.rolling.RollingFileAppender">
+  
+  
+      <param name="File" value="/pfms/520cpsms/logs/PFMS_OGB_debug.log" />
+        <param name="threshold" value="DEBUG"/>
+     <param name="immediateFlush" value="true"/>
+    <rollingPolicy class="org.apache.log4j.rolling.TimeBasedRollingPolicy">
+           <param name="FileNamePattern" value="/pfms/520cpsms/logs/GZ/PFMS_OGB_debug.%d{yyyy-MM-dd}.log.gz" />
+             </rollingPolicy>
+    <layout class="org.apache.log4j.PatternLayout">
+        <param name="ConversionPattern" value="%d  [%c] %m%n"/>
+    </layout>
+</appender>
+ 
+ <appender name="fileAppender1" class="org.apache.log4j.rolling.RollingFileAppender">
+  
+  
+       <param name="File" value="/pfms/520cpsms/logs/PFMS_OGB_info.log" />
+         <param name="threshold" value="INFO"/>
+     <param name="immediateFlush" value="true"/>
+    <rollingPolicy class="org.apache.log4j.rolling.TimeBasedRollingPolicy">
+      
+           <param name="FileNamePattern" value="/pfms/520cpsms/logs/GZ/PFMS_OGB_info.%d{yyyy-MM-dd}.log.gz" />
+           </rollingPolicy>
+    <layout class="org.apache.log4j.PatternLayout">
+        <param name="ConversionPattern" value="%d  [%c] %m%n"/>
+    </layout>
+</appender>
+ 
+<appender name="fileAppender2" class="org.apache.log4j.rolling.RollingFileAppender">
+  
+   
+      <param name="File" value="/pfms/520cpsms/logs/PFMS_OGB_Error.log" />
+             
+    <param name="threshold" value="ERROR"/>
+     <param name="immediateFlush" value="true"/>
+    <rollingPolicy class="org.apache.log4j.rolling.TimeBasedRollingPolicy">
+
+     <param name="FileNamePattern" value="/pfms/520cpsms/logs/GZ/PFMS_OGB_Error.%d{yyyy-MM-dd}.log.gz" />
+    </rollingPolicy>
+    <layout class="org.apache.log4j.PatternLayout">
+        <param name="ConversionPattern" value="%d  [%c] %m%n"/>
+    </layout>
+</appender>  
+  
+  
+  <root>
+    <priority value="DEBUG"></priority>
+    <appender-ref ref="fileAppender" />
+    <appender-ref ref="fileAppender1" />
+    <appender-ref ref="fileAppender2" />
+  </root>
+</log4j:configuration>
